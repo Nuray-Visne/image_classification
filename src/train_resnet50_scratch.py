@@ -1,6 +1,7 @@
 import random
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -16,8 +17,11 @@ from torchvision import datasets, models, transforms
 SEED = 42
 IMG_SIZE = 224
 BATCH_SIZE = 32
-NUM_EPOCHS = 10
-NUM_WORKERS = 2
+NUM_EPOCHS = 20
+NUM_WORKERS = 4
+TARGET_CLASSES = ["Egg (Food)", "Chicken", "Balloon"]
+MAX_IMAGES_PER_CLASS = 500
+MAX_SOURCE_SAMPLES = 2000
 
 
 def detect_env() -> str:
@@ -52,17 +56,36 @@ def resolve_paths():
     return env, repo_root, data_root, split_root, results_root
 
 
-def ensure_dataset(data_root: Path):
+def get_class_counts(data_root: Path, class_names):
+    counts = {}
+    for class_name in class_names:
+        class_dir = data_root / class_name
+        if class_dir.exists():
+            counts[class_name] = len([p for p in class_dir.iterdir() if p.is_file()])
+        else:
+            counts[class_name] = 0
+    return counts
+
+
+def ensure_dataset(data_root: Path, class_names, max_images_per_class: int, max_samples: int):
     if data_root.exists():
-        print("Using existing dataset at", data_root)
-        return
+        class_counts = get_class_counts(data_root, class_names)
+        if all(count >= max_images_per_class for count in class_counts.values()):
+            print("Using existing dataset at", data_root)
+            print("Existing class counts:", class_counts)
+            return
+
+        print("Existing dataset does not match requested sample size. Rebuilding...")
+        print("Existing class counts:", class_counts)
+        shutil.rmtree(data_root)
 
     from download_images import create_classification_dataset_from_openimages
 
     create_classification_dataset_from_openimages(
-        class_names=["Egg (Food)", "Chicken", "Balloon"],
+        class_names=class_names,
         output_dir=str(data_root),
-        max_images_per_class=200,
+        max_images_per_class=max_images_per_class,
+        max_samples=max_samples,
     )
 
 
@@ -172,7 +195,12 @@ def main():
     print("Data root:", data_root)
     print("Results root:", results_root)
 
-    ensure_dataset(data_root)
+    ensure_dataset(
+        data_root,
+        class_names=TARGET_CLASSES,
+        max_images_per_class=MAX_IMAGES_PER_CLASS,
+        max_samples=MAX_SOURCE_SAMPLES,
+    )
 
     train_dir, test_dir, split_summary = create_train_test_split(
         data_root, split_root, train_ratio=0.8, seed=SEED
@@ -215,16 +243,21 @@ def main():
     print("Number of parameters:", num_parameters)
 
     history = {
+        "epoch_time_seconds": [],
         "train_loss": [],
         "train_acc": [],
         "test_loss": [],
         "test_acc": [],
     }
 
+    training_start_time = time.time()
     for epoch in range(NUM_EPOCHS):
+        epoch_start_time = time.time()
         train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
         test_loss, test_acc, _, _ = evaluate(model, test_loader, criterion, device)
+        epoch_time_seconds = time.time() - epoch_start_time
 
+        history["epoch_time_seconds"].append(epoch_time_seconds)
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
         history["test_loss"].append(test_loss)
@@ -233,12 +266,15 @@ def main():
         print(
             f"Epoch {epoch + 1}/{NUM_EPOCHS} | "
             f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f} | "
-            f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f}"
+            f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f} | "
+            f"Time: {epoch_time_seconds:.2f}s"
         )
+    total_training_time_seconds = time.time() - training_start_time
 
     final_test_loss, final_test_acc, _, _ = evaluate(model, test_loader, criterion, device)
     print(f"Final test loss: {final_test_loss:.4f}")
     print(f"Final test accuracy: {final_test_acc * 100:.2f}%")
+    print(f"Total training time: {total_training_time_seconds:.2f}s")
 
     results_summary = pd.DataFrame(
         [
@@ -254,6 +290,8 @@ def main():
                 "final_test_loss": final_test_loss,
                 "final_test_accuracy": final_test_acc,
                 "num_parameters": num_parameters,
+                "total_training_time_seconds": total_training_time_seconds,
+                "average_epoch_time_seconds": sum(history["epoch_time_seconds"]) / len(history["epoch_time_seconds"]),
             }
         ]
     )
@@ -261,6 +299,7 @@ def main():
     history_df = pd.DataFrame(
         {
             "epoch": list(range(1, NUM_EPOCHS + 1)),
+            "epoch_time_seconds": history["epoch_time_seconds"],
             "train_loss": history["train_loss"],
             "train_acc": history["train_acc"],
             "test_loss": history["test_loss"],
