@@ -1,0 +1,2 @@
+model,seed,img_size,batch_size,num_epochs,classes,train_samples,test_samples,final_test_loss,final_test_accuracy,num_parameters
+resnet50_scratch,42,224,32,10,"Balloon, Chicken, Egg (Food)",480,120,1.2082290967305502,0.6,23514179
