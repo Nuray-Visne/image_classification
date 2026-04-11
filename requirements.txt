@@ -1,3 +1,6 @@
+# Python 3.12: FiftyOne's eta stack imports distutils; setuptools 80+ drops the shim — keep <76.
+setuptools>=69,<76
+
 pandas
 numpy
 matplotlib
@@ -6,3 +9,5 @@ scikit-learn
 jupyter
 pillow
 requests
+fiftyone 
+tqdm
