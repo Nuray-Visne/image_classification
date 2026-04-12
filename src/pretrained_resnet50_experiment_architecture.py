@@ -219,6 +219,12 @@ def evaluate(model, loader, criterion, device):
     return avg_loss, avg_acc
 
 
+def count_parameters(model):
+    total_parameters = int(sum(p.numel() for p in model.parameters()))
+    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    return total_parameters, trainable_parameters
+
+
 def main():
     print("Torch version:", torch.__version__)
     print("CUDA available:", torch.cuda.is_available())
@@ -268,8 +274,7 @@ def main():
     model = build_modified_pretrained_resnet50(num_classes=len(train_dataset.classes)).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
-    num_parameters = int(sum(p.numel() for p in model.parameters()))
-    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    num_parameters, trainable_parameters = count_parameters(model)
 
     print("Number of parameters:", num_parameters)
     print("Trainable parameters:", trainable_parameters)
@@ -370,6 +375,7 @@ def main():
 
     plt.tight_layout()
     plt.savefig(figure_path, dpi=200, bbox_inches="tight")
+    plt.close()
 
     print("Saved:", summary_path)
     print("Saved:", history_path)

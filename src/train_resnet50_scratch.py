@@ -179,6 +179,12 @@ def evaluate(model, loader, criterion, device):
     return avg_loss, avg_acc, all_labels, all_preds
 
 
+def count_parameters(model):
+    total_parameters = int(sum(p.numel() for p in model.parameters()))
+    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    return total_parameters, trainable_parameters
+
+
 def measure_inference_time(model, loader, device, runs: int = 20):
     model.eval()
     images, _ = next(iter(loader))
@@ -261,8 +267,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    num_parameters = int(sum(p.numel() for p in model.parameters()))
-    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    num_parameters, trainable_parameters = count_parameters(model)
     print("Number of parameters:", num_parameters)
     print("Trainable parameters:", trainable_parameters)
 
@@ -354,7 +359,7 @@ def main():
     plt.plot(epochs, history["test_loss"], label="Test Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Loss over 10 Epochs")
+    plt.title("ResNet50 Scratch Loss")
     plt.legend()
 
     plt.subplot(1, 2, 2)
@@ -362,18 +367,20 @@ def main():
     plt.plot(epochs, history["test_acc"], label="Test Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
-    plt.title("Accuracy over 10 Epochs")
+    plt.title("ResNet50 Scratch Accuracy")
     plt.legend()
 
     plt.tight_layout()
     plt.savefig(figure_path, dpi=200, bbox_inches="tight")
+    plt.close()
 
     cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=test_dataset.classes)
-    disp.plot(cmap="Blues", values_format="d")
-    plt.title("ResNet50 Scratch Confusion Matrix")
-    plt.savefig(confusion_matrix_path, dpi=200, bbox_inches="tight")
+    disp.plot(cmap="Blues", values_format="d", ax=ax)
+    ax.set_title("ResNet50 Scratch Confusion Matrix")
+    fig.savefig(confusion_matrix_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
     print("Saved:", summary_path)
     print("Saved:", history_path)
     print("Saved:", figure_path)
