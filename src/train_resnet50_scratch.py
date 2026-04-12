@@ -70,12 +70,12 @@ def get_class_counts(data_root: Path, class_names):
 def ensure_dataset(data_root: Path, class_names, max_images_per_class: int, max_samples: int):
     if data_root.exists():
         class_counts = get_class_counts(data_root, class_names)
-        if all(count >= max_images_per_class for count in class_counts.values()):
+        if all(count == max_images_per_class for count in class_counts.values()):
             print("Using existing dataset at", data_root)
             print("Existing class counts:", class_counts)
             return
 
-        print("Existing dataset does not match requested sample size. Rebuilding...")
+        print("Existing dataset does not exactly match requested sample size. Rebuilding...")
         print("Existing class counts:", class_counts)
         shutil.rmtree(data_root)
 
