@@ -1,3 +1,4 @@
+import os
 import random
 import shutil
 import sys
@@ -324,7 +325,7 @@ def main():
     plt.plot(epochs, history["test_loss"], label="Test Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Loss over 10 Epochs")
+    plt.title(f"Loss over {NUM_EPOCHS} epochs")
     plt.legend()
 
     plt.subplot(1, 2, 2)
@@ -332,7 +333,7 @@ def main():
     plt.plot(epochs, history["test_acc"], label="Test Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
-    plt.title("Accuracy over 10 Epochs")
+    plt.title(f"Accuracy over {NUM_EPOCHS} epochs")
     plt.legend()
 
     plt.tight_layout()
