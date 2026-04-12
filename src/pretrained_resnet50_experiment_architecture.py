@@ -38,7 +38,6 @@ def freeze_modules(modules):
 
 
 def build_modified_pretrained_resnet50(num_classes: int):
-    # Keras conv3_block4_out maps most closely to the output of torchvision ResNet layer2.
     backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
 
     stem = nn.Sequential(
@@ -52,7 +51,10 @@ def build_modified_pretrained_resnet50(num_classes: int):
 
     freeze_modules([stem, layer1])
 
-    return nn.Sequential(
+    # for gradcam Zugriff auf die letzte conv-Schicht in layer4
+    extra_conv3 = nn.Conv2d(1024, 1024, kernel_size=3, stride=2, padding=1)
+
+    model = nn.Sequential(
         stem,
         layer1,
         layer2,
@@ -62,13 +64,15 @@ def build_modified_pretrained_resnet50(num_classes: int):
         nn.Conv2d(512, 1024, kernel_size=1, stride=1, padding=0),
         nn.BatchNorm2d(1024),
         nn.LeakyReLU(inplace=True),
-        nn.Conv2d(1024, 1024, kernel_size=3, stride=2, padding=1),
+        extra_conv3,
         nn.BatchNorm2d(1024),
         nn.LeakyReLU(inplace=True),
         nn.AdaptiveAvgPool2d((1, 1)),
         nn.Flatten(),
         nn.Linear(1024, num_classes),
     )
+
+    return model, extra_conv3
 
 
 def main():
@@ -194,9 +198,11 @@ def main():
     history_path = results_root / "resnet50_experiment_architecture_history.csv"
     figure_path = results_root / "resnet50_experiment_architecture_curves.png"
     confusion_matrix_path = results_root / "resnet50_experiment_architecture_confusion_matrix.png"
+    checkpoint_path = results_root / "resnet50_experiment_architecture.pth"
 
     results_summary.to_csv(summary_path, index=False)
     history_df.to_csv(history_path, index=False)
+    torch.save(model.state_dict(), checkpoint_path)
 
     save_training_curves(history, NUM_EPOCHS, figure_path, "Modified Pretrained")
     save_confusion_matrix_figure(
@@ -211,6 +217,7 @@ def main():
     print("Saved:", history_path)
     print("Saved:", figure_path)
     print("Saved:", confusion_matrix_path)
+    print("Saved:", checkpoint_path)
 
 
 if __name__ == "__main__":

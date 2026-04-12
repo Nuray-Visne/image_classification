@@ -9,6 +9,7 @@ import torch.nn as nn
 from torchvision import models, transforms
 
 from train_resnet50_scratch import build_scratch_resnet50
+from pretrained_resnet50_experiment_architecture import build_modified_pretrained_resnet50
 
 
 CLASS_NAMES = ["Egg (Food)", "Chicken", "Balloon"]
@@ -20,63 +21,13 @@ def build_pretrained_resnet50(num_classes: int):
     target_layer = model.layer4[-1].conv3
     return model, target_layer
 
-
-def build_modified_pretrained_resnet50(num_classes: int):
-    backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
-
-    stem = nn.Sequential(
-        backbone.conv1,
-        backbone.bn1,
-        backbone.relu,
-        backbone.maxpool,
-    )
-    layer1 = backbone.layer1
-    layer2 = backbone.layer2
-
-    for module in [stem, layer1]:
-        for param in module.parameters():
-            param.requires_grad = False
-
-    extra_conv1 = nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1)
-    extra_bn1 = nn.BatchNorm2d(512)
-    extra_act1 = nn.LeakyReLU(inplace=True)
-
-    extra_conv2 = nn.Conv2d(512, 1024, kernel_size=1, stride=1, padding=0)
-    extra_bn2 = nn.BatchNorm2d(1024)
-    extra_act2 = nn.LeakyReLU(inplace=True)
-
-    extra_conv3 = nn.Conv2d(1024, 1024, kernel_size=3, stride=2, padding=1)
-    extra_bn3 = nn.BatchNorm2d(1024)
-    extra_act3 = nn.LeakyReLU(inplace=True)
-
-    model = nn.Sequential(
-        stem,
-        layer1,
-        layer2,
-        extra_conv1,
-        extra_bn1,
-        extra_act1,
-        extra_conv2,
-        extra_bn2,
-        extra_act2,
-        extra_conv3,
-        extra_bn3,
-        extra_act3,
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Linear(1024, num_classes),
-    )
-    target_layer = extra_conv3
-    return model, target_layer
-
-
 def load_model(model_type: str, checkpoint_path: Path, device):
     if model_type == "scratch":
         model = build_scratch_resnet50(len(CLASS_NAMES))
         target_layer = model.layer4[-1].conv3
     elif model_type == "pretrained":
         model, target_layer = build_pretrained_resnet50(len(CLASS_NAMES))
-    elif model_type == "architecture":
+    elif model_type == "modified_pretrained":
         model, target_layer = build_modified_pretrained_resnet50(len(CLASS_NAMES))
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
@@ -178,14 +129,14 @@ def save_visualization(image_path: Path, rgb_img, overlay, predicted_class: int,
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Grad-CAM activation maps for local images.")
-    parser.add_argument("--model-type", choices=["scratch", "pretrained", "architecture"], required=True)
+    parser.add_argument("--model-type", choices=["scratch", "pretrained", "modified_pretrained"], required=True)
     parser.add_argument("--checkpoint", default= None, help="Path to the trained .pth checkpoint file")
     parser.add_argument("--images-dir", default="images", help="Directory with your test images")
     parser.add_argument("--output-dir", default="results/gradcam", help="Directory to save Grad-CAM outputs")
     args = parser.parse_args()
 
     if args.model_type != "pretrained" and args.checkpoint is None:
-       raise ValueError("Checkpoint required for scratch and architecture models")
+       raise ValueError("Checkpoint required for scratch and modified_pretrained models")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpoint_path = Path(args.checkpoint) if args.checkpoint is not None else None
