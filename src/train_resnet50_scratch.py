@@ -157,9 +157,11 @@ def main():
     history_path = results_root / "resnet50_scratch_history.csv"
     figure_path = results_root / "resnet50_scratch_curves.png"
     confusion_matrix_path = results_root / "resnet50_scratch_confusion_matrix.png"
+    checkpoint_path = results_root / "resnet50_scratch.pth"
 
     results_summary.to_csv(summary_path, index=False)
     history_df.to_csv(history_path, index=False)
+    torch.save(model.state_dict(), checkpoint_path)
 
     save_training_curves(history, NUM_EPOCHS, figure_path, "ResNet50 Scratch")
     save_confusion_matrix_figure(
@@ -173,6 +175,7 @@ def main():
     print("Saved:", history_path)
     print("Saved:", figure_path)
     print("Saved:", confusion_matrix_path)
+    print("Saved:", checkpoint_path)
 
 
 if __name__ == "__main__":
