@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, confusion_matrix
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
 
@@ -179,6 +179,28 @@ def evaluate(model, loader, criterion, device):
     return avg_loss, avg_acc, all_labels, all_preds
 
 
+def measure_inference_time(model, loader, device, runs: int = 20):
+    model.eval()
+    images, _ = next(iter(loader))
+    images = images[:1].to(device)
+    times = []
+
+    with torch.no_grad():
+        _ = model(images)
+
+        for _ in range(runs):
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            start_time = time.time()
+            _ = model(images)
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            times.append(time.time() - start_time)
+
+    avg_seconds = sum(times) / len(times)
+    return avg_seconds, avg_seconds * 1000.0
+
+
 def main():
     print("Torch version:", torch.__version__)
     print("CUDA available:", torch.cuda.is_available())
@@ -240,7 +262,9 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     num_parameters = int(sum(p.numel() for p in model.parameters()))
+    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
     print("Number of parameters:", num_parameters)
+    print("Trainable parameters:", trainable_parameters)
 
     history = {
         "epoch_time_seconds": [],
@@ -271,11 +295,13 @@ def main():
         )
     total_training_time_seconds = time.time() - training_start_time
 
-    final_test_loss, final_test_acc, _, _ = evaluate(model, test_loader, criterion, device)
+    final_test_loss, final_test_acc, y_true, y_pred = evaluate(model, test_loader, criterion, device)
     final_train_acc = history["train_acc"][-1]
+    inference_time_seconds, inference_time_ms = measure_inference_time(model, test_loader, device)
     print(f"Final test loss: {final_test_loss:.4f}")
     print(f"Final test accuracy: {final_test_acc * 100:.2f}%")
     print(f"Total training time: {total_training_time_seconds:.2f}s")
+    print(f"Average inference time: {inference_time_ms:.2f} ms per image")
 
     results_summary = pd.DataFrame(
         [
@@ -292,8 +318,11 @@ def main():
                 "final_test_accuracy": final_test_acc,
                 "final_test_loss": final_test_loss,
                 "num_parameters": num_parameters,
+                "trainable_parameters": trainable_parameters,
                 "total_training_time_seconds": total_training_time_seconds,
                 "average_epoch_time_seconds": sum(history["epoch_time_seconds"]) / len(history["epoch_time_seconds"]),
+                "average_inference_time_seconds": inference_time_seconds,
+                "average_inference_time_ms": inference_time_ms,
             }
         ]
     )
@@ -312,6 +341,7 @@ def main():
     summary_path = results_root / "resnet50_scratch_summary.csv"
     history_path = results_root / "resnet50_scratch_history.csv"
     figure_path = results_root / "resnet50_scratch_curves.png"
+    confusion_matrix_path = results_root / "resnet50_scratch_confusion_matrix.png"
 
     results_summary.to_csv(summary_path, index=False)
     history_df.to_csv(history_path, index=False)
@@ -337,9 +367,17 @@ def main():
 
     plt.tight_layout()
     plt.savefig(figure_path, dpi=200, bbox_inches="tight")
+
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(6, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=test_dataset.classes)
+    disp.plot(cmap="Blues", values_format="d")
+    plt.title("ResNet50 Scratch Confusion Matrix")
+    plt.savefig(confusion_matrix_path, dpi=200, bbox_inches="tight")
     print("Saved:", summary_path)
     print("Saved:", history_path)
     print("Saved:", figure_path)
+    print("Saved:", confusion_matrix_path)
 
 
 if __name__ == "__main__":
