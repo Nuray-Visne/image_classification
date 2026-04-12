@@ -272,6 +272,7 @@ def main():
     total_training_time_seconds = time.time() - training_start_time
 
     final_test_loss, final_test_acc, _, _ = evaluate(model, test_loader, criterion, device)
+    final_train_acc = history["train_acc"][-1]
     print(f"Final test loss: {final_test_loss:.4f}")
     print(f"Final test accuracy: {final_test_acc * 100:.2f}%")
     print(f"Total training time: {total_training_time_seconds:.2f}s")
@@ -287,8 +288,9 @@ def main():
                 "classes": ", ".join(train_dataset.classes),
                 "train_samples": len(train_dataset),
                 "test_samples": len(test_dataset),
-                "final_test_loss": final_test_loss,
+                "final_train_accuracy": final_train_acc,
                 "final_test_accuracy": final_test_acc,
+                "final_test_loss": final_test_loss,
                 "num_parameters": num_parameters,
                 "total_training_time_seconds": total_training_time_seconds,
                 "average_epoch_time_seconds": sum(history["epoch_time_seconds"]) / len(history["epoch_time_seconds"]),
