@@ -30,6 +30,11 @@ TARGET_CLASSES = ["Egg (Food)", "Chicken", "Balloon"]
 MAX_IMAGES_PER_CLASS = 500
 MAX_SOURCE_SAMPLES = 2000
 
+def build_scratch_resnet50(num_classes: int):
+    model = models.resnet50(weights=None)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    return model
+
 
 def main():
     print("Torch version:", torch.__version__)
@@ -82,8 +87,7 @@ def main():
     print("Train samples:", len(train_dataset))
     print("Test samples:", len(test_dataset))
 
-    model = models.resnet50(weights=None)
-    model.fc = nn.Linear(model.fc.in_features, len(train_dataset.classes))
+    model = build_scratch_resnet50(num_classes=len(train_dataset.classes))
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()

@@ -60,7 +60,7 @@ def preprocess_image(image_path: Path, device):
     return rgb_img, input_tensor
 
 
-def generate_gradcam(model, target_layer, input_tensor, target_class=None):
+def generate_gradcam(model, target_layer, input_tensor):
     activations = []
     gradients = []
 

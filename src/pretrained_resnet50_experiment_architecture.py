@@ -126,7 +126,8 @@ def main():
     print("Train samples:", len(train_dataset))
     print("Test samples:", len(test_dataset))
 
-    model = build_modified_pretrained_resnet50(num_classes=len(train_dataset.classes)).to(device)
+    model, _ = build_modified_pretrained_resnet50(num_classes=len(train_dataset.classes))
+    model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
     num_parameters, trainable_parameters = count_parameters(model)
