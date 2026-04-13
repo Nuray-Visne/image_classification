@@ -24,11 +24,11 @@ from utils import (
 SEED = 42
 IMG_SIZE = 224
 BATCH_SIZE = 32
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
 NUM_WORKERS = 4
 TARGET_CLASSES = ["Egg (Food)", "Chicken", "Balloon"]
 MAX_IMAGES_PER_CLASS = 500
-MAX_SOURCE_SAMPLES = 5000
+MAX_SOURCE_SAMPLES = 2000
 
 
 def freeze_modules(modules):
