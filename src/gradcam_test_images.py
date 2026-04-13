@@ -1,3 +1,19 @@
+"""Generate Grad-CAM visualizations for trained classification models.
+
+Requirements:
+- Install dependencies from `requirements.txt`
+- Place input images in `images/` or pass a custom `--images-dir`
+- Provide a trained checkpoint via `--checkpoint`
+
+Outputs:
+- Grad-CAM PNG files in `results/gradcam/` by default
+
+Run examples:
+- `python src/gradcam_test_images.py --model-type scratch --checkpoint results/resnet50_scratch.pth`
+- `python src/gradcam_test_images.py --model-type transfer_learning --checkpoint results/resnet50_transfer.pth`
+- `python src/gradcam_test_images.py --model-type modified_pretrained --checkpoint results/resnet50_experiment_architecture.pth`
+"""
+
 import argparse
 from pathlib import Path
 

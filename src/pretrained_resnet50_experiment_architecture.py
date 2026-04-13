@@ -1,3 +1,21 @@
+"""Train the modified pretrained ResNet50 experiment architecture.
+
+Requirements:
+- Install dependencies from `requirements.txt`
+- Run from the project root so `src/` and `results/` resolve correctly
+
+
+Outputs:
+- `results/resnet50_experiment_architecture.pth`
+- `results/resnet50_experiment_architecture_summary.csv`
+- `results/resnet50_experiment_architecture_history.csv`
+- `results/resnet50_experiment_architecture_curves.png`
+- `results/resnet50_experiment_architecture_confusion_matrix.png`
+
+Run:
+- `python src/pretrained_resnet50_experiment_architecture.py`
+"""
+
 import time
 
 import torch

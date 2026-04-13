@@ -4,6 +4,21 @@ This file was created so code from `train_resnet50_transfer_learning.ipynb`
 can also be used from regular Python modules such as `gradcam_test_images.py`.
 The notebook is the original source of the transfer-learning experiment, and
 this `.py` file mirrors the relevant model/training code in importable form.
+
+Requirements:
+- Install dependencies from `requirements.txt`
+- Run from the project root so `src/` and `results/` resolve correctly
+
+
+Outputs:
+- `results/resnet50_transfer.pth`
+- `results/resnet50_transfer_summary.csv`
+- `results/resnet50_transfer_history.csv`
+- `results/resnet50_transfer_curves.png`
+- `results/resnet50_transfer_confusion_matrix.png`
+
+Run:
+- `python src/train_resnet50_transfer_learning.py`
 """
 
 import time

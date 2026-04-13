@@ -1,3 +1,21 @@
+"""Train a scratch ResNet50 classifier on the Open Images subset.
+
+Requirements:
+- Install dependencies from `requirements.txt`
+- Run from the project root so `src/` and `results/` resolve correctly
+
+
+Outputs:
+- `results/resnet50_scratch.pth`
+- `results/resnet50_scratch_summary.csv`
+- `results/resnet50_scratch_history.csv`
+- `results/resnet50_scratch_curves.png`
+- `results/resnet50_scratch_confusion_matrix.png`
+
+Run:
+- `python src/train_resnet50_scratch.py`
+"""
+
 import os
 import time
 
