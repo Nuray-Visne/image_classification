@@ -1,4 +1,3 @@
-import os
 import time
 
 import torch
@@ -25,16 +24,55 @@ from utils import (
 SEED = 42
 IMG_SIZE = 224
 BATCH_SIZE = 32
-NUM_EPOCHS = 20
+NUM_EPOCHS = 10
 NUM_WORKERS = 4
 TARGET_CLASSES = ["Egg (Food)", "Chicken", "Balloon"]
 MAX_IMAGES_PER_CLASS = 500
-MAX_SOURCE_SAMPLES = 2000
+MAX_SOURCE_SAMPLES = 5000
 
-def build_scratch_resnet50(num_classes: int):
-    model = models.resnet50(weights=None)
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
-    return model
+
+def freeze_modules(modules):
+    for module in modules:
+        for param in module.parameters():
+            param.requires_grad = False
+
+
+def build_modified_pretrained_resnet50(num_classes: int):
+    backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+
+    stem = nn.Sequential(
+        backbone.conv1,
+        backbone.bn1,
+        backbone.relu,
+        backbone.maxpool,
+    )
+    layer1 = backbone.layer1
+    layer2 = backbone.layer2
+
+    freeze_modules([stem, layer1])
+
+    # for gradcam Zugriff auf die letzte conv-Schicht in layer4
+    extra_conv3 = nn.Conv2d(1024, 1024, kernel_size=3, stride=2, padding=1)
+
+    model = nn.Sequential(
+        stem,
+        layer1,
+        layer2,
+        nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(512),
+        nn.LeakyReLU(inplace=True),
+        nn.Conv2d(512, 1024, kernel_size=1, stride=1, padding=0),
+        nn.BatchNorm2d(1024),
+        nn.LeakyReLU(inplace=True),
+        extra_conv3,
+        nn.BatchNorm2d(1024),
+        nn.LeakyReLU(inplace=True),
+        nn.AdaptiveAvgPool2d((1, 1)),
+        nn.Flatten(),
+        nn.Linear(1024, num_classes),
+    )
+
+    return model, extra_conv3
 
 
 def main():
@@ -44,7 +82,7 @@ def main():
     set_seed(SEED)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env, repo_root, data_root, split_root, results_root = resolve_paths()
+    env, _, data_root, split_root, results_root = resolve_paths()
 
     print("Environment:", env)
     print("Data root:", data_root)
@@ -88,12 +126,12 @@ def main():
     print("Train samples:", len(train_dataset))
     print("Test samples:", len(test_dataset))
 
-    model = build_scratch_resnet50(num_classes=len(train_dataset.classes))
+    model, _ = build_modified_pretrained_resnet50(num_classes=len(train_dataset.classes))
     model = model.to(device)
-
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4)
     num_parameters, trainable_parameters = count_parameters(model)
+
     print("Number of parameters:", num_parameters)
     print("Trainable parameters:", trainable_parameters)
 
@@ -124,11 +162,11 @@ def main():
             f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f} | "
             f"Time: {epoch_time_seconds:.2f}s"
         )
-    total_training_time_seconds = time.time() - training_start_time
 
+    total_training_time_seconds = time.time() - training_start_time
     final_test_loss, final_test_acc, y_true, y_pred = evaluate(model, test_loader, criterion, device)
-    final_train_acc = history["train_acc"][-1]
     inference_time_seconds, inference_time_ms = measure_inference_time(model, test_loader, device)
+
     print(f"Final test loss: {final_test_loss:.4f}")
     print(f"Final test accuracy: {final_test_acc * 100:.2f}%")
     print(f"Total training time: {total_training_time_seconds:.2f}s")
@@ -136,7 +174,7 @@ def main():
 
     results_summary = build_results_summary(
         {
-            "model": "resnet50_scratch",
+            "model": "resnet50_modified_pretrained",
             "seed": SEED,
             "img_size": IMG_SIZE,
             "batch_size": BATCH_SIZE,
@@ -144,9 +182,8 @@ def main():
             "classes": ", ".join(train_dataset.classes),
             "train_samples": len(train_dataset),
             "test_samples": len(test_dataset),
-            "final_train_accuracy": final_train_acc,
-            "final_test_accuracy": final_test_acc,
             "final_test_loss": final_test_loss,
+            "final_test_accuracy": final_test_acc,
             "num_parameters": num_parameters,
             "trainable_parameters": trainable_parameters,
             "total_training_time_seconds": total_training_time_seconds,
@@ -158,24 +195,25 @@ def main():
 
     history_df = build_history_dataframe(history, NUM_EPOCHS)
 
-    summary_path = results_root / "resnet50_scratch_summary.csv"
-    history_path = results_root / "resnet50_scratch_history.csv"
-    figure_path = results_root / "resnet50_scratch_curves.png"
-    confusion_matrix_path = results_root / "resnet50_scratch_confusion_matrix.png"
-    checkpoint_path = results_root / "resnet50_scratch.pth"
+    summary_path = results_root / "resnet50_experiment_architecture_summary.csv"
+    history_path = results_root / "resnet50_experiment_architecture_history.csv"
+    figure_path = results_root / "resnet50_experiment_architecture_curves.png"
+    confusion_matrix_path = results_root / "resnet50_experiment_architecture_confusion_matrix.png"
+    checkpoint_path = results_root / "resnet50_experiment_architecture.pth"
 
     results_summary.to_csv(summary_path, index=False)
     history_df.to_csv(history_path, index=False)
     torch.save(model.state_dict(), checkpoint_path)
 
-    save_training_curves(history, NUM_EPOCHS, figure_path, "ResNet50 Scratch")
+    save_training_curves(history, NUM_EPOCHS, figure_path, "Modified Pretrained")
     save_confusion_matrix_figure(
         y_true,
         y_pred,
         test_dataset.classes,
         confusion_matrix_path,
-        "ResNet50 Scratch Confusion Matrix",
+        "Modified Pretrained Confusion Matrix",
     )
+
     print("Saved:", summary_path)
     print("Saved:", history_path)
     print("Saved:", figure_path)
