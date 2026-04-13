@@ -27,7 +27,7 @@ def detect_env() -> str:
 
 def resolve_paths():
     env = detect_env()
-    repo_root = Path.cwd()
+    repo_root = Path(__file__).resolve().parent.parent
     src_dir = repo_root / "src"
     if str(src_dir) not in sys.path:
         sys.path.append(str(src_dir))
