@@ -12,7 +12,7 @@ from train_resnet50_transfer_learning import build_transfer_learning_resnet50
 from pretrained_resnet50_experiment_architecture import build_modified_pretrained_resnet50
 
 
-CLASS_NAMES = ["Egg (Food)", "Chicken", "Balloon"]
+CLASS_NAMES = ["Balloon", "Chicken", "Egg (Food)"]
 IMG_SIZE = 224
 
 def load_model(model_type: str, checkpoint_path: Path, device):
