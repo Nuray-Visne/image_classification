@@ -5,28 +5,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 import torch
-import torch.nn as nn
-from torchvision import models, transforms
+from torchvision import transforms
 
 from train_resnet50_scratch import build_scratch_resnet50
+from train_resnet50_transfer_learning import build_transfer_learning_resnet50
 from pretrained_resnet50_experiment_architecture import build_modified_pretrained_resnet50
 
 
 CLASS_NAMES = ["Egg (Food)", "Chicken", "Balloon"]
 IMG_SIZE = 224
 
-def build_pretrained_resnet50(num_classes: int):
-    model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
-    target_layer = model.layer4[-1].conv3
-    return model, target_layer
-
 def load_model(model_type: str, checkpoint_path: Path, device):
     if model_type == "scratch":
         model = build_scratch_resnet50(len(CLASS_NAMES))
         target_layer = model.layer4[-1].conv3
-    elif model_type == "pretrained":
-        model, target_layer = build_pretrained_resnet50(len(CLASS_NAMES))
+    elif model_type == "transfer_learning":
+        model = build_transfer_learning_resnet50(len(CLASS_NAMES))
+        target_layer = model.layer4[-1].conv3
     elif model_type == "modified_pretrained":
         model, target_layer = build_modified_pretrained_resnet50(len(CLASS_NAMES))
     else:
@@ -129,14 +124,18 @@ def save_visualization(image_path: Path, rgb_img, overlay, predicted_class: int,
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Grad-CAM activation maps for local images.")
-    parser.add_argument("--model-type", choices=["scratch", "pretrained", "modified_pretrained"], required=True)
+    parser.add_argument(
+        "--model-type",
+        choices=["scratch", "transfer_learning", "modified_pretrained"],
+        required=True,
+    )
     parser.add_argument("--checkpoint", default= None, help="Path to the trained .pth checkpoint file")
     parser.add_argument("--images-dir", default="images", help="Directory with your test images")
     parser.add_argument("--output-dir", default="results/gradcam", help="Directory to save Grad-CAM outputs")
     args = parser.parse_args()
 
-    if args.model_type != "pretrained" and args.checkpoint is None:
-       raise ValueError("Checkpoint required for scratch and modified_pretrained models")
+    if args.model_type in {"scratch", "transfer_learning", "modified_pretrained"} and args.checkpoint is None:
+       raise ValueError("Checkpoint required for scratch, transfer_learning, and modified_pretrained models")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpoint_path = Path(args.checkpoint) if args.checkpoint is not None else None
