@@ -122,7 +122,7 @@ def save_visualization(image_path: Path, rgb_img, overlay, predicted_class: int,
     plt.axis("off")
 
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.savefig(out_path, format="png", dpi=200, bbox_inches="tight")
     plt.close()
     return out_path
 
