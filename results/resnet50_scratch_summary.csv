@@ -1,2 +1,2 @@
-model,seed,img_size,batch_size,num_epochs,classes,train_samples,test_samples,final_test_loss,final_test_accuracy,num_parameters,total_training_time_seconds,average_epoch_time_seconds
-resnet50_scratch,42,224,32,20,"Balloon, Chicken, Egg (Food)",1200,300,0.7354504299163819,0.7166666666666667,23514179,304.1154203414917,15.205690252780915
+model,seed,img_size,batch_size,num_epochs,classes,train_samples,test_samples,final_train_accuracy,final_test_accuracy,final_test_loss,num_parameters,trainable_parameters,total_training_time_seconds,average_epoch_time_seconds,average_inference_time_seconds,average_inference_time_ms
+resnet50_scratch,42,224,32,20,"Balloon, Chicken, Egg (Food)",1200,300,0.8891666666666667,0.71,1.001659870147705,23514179,23514179,299.0102331638336,14.95043991804123,0.0057043790817260746,5.704379081726074

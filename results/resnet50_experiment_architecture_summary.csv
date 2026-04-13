@@ -1,0 +1,2 @@
+model,seed,img_size,batch_size,num_epochs,classes,train_samples,test_samples,final_test_loss,final_test_accuracy,num_parameters,trainable_parameters,total_training_time_seconds,average_epoch_time_seconds,average_inference_time_seconds,average_inference_time_ms
+resnet50_modified_pretrained,42,224,32,20,"Balloon, Chicken, Egg (Food)",1200,300,0.19646926313638688,0.93,13776451,13551107,278.9933626651764,13.949581360816955,0.005137717723846436,5.1377177238464355
