@@ -1,0 +1,3 @@
+timestamp,experiment_name,summary_csv_path,runtime_env,device,torch_version,python_version,cuda_available,cuda_version,gpu_name,gpu_count,platform_system,platform_release,hostname,colab_tpu,colab_gpu_tier,colab_session_note
+2026-04-13T14:25:50Z,transfer,/content/src/results/resnet50_transfer_summary.csv,colab,cuda,2.10.0+cu128,3.12.13,True,12.8,Tesla T4,1,Linux,6.6.113+,56388a9f7ab4,False,unknown,not_set
+2026-04-13T14:30:53Z,transfer_aug,/content/src/results/resnet50_transfer_aug_summary.csv,colab,cuda,2.10.0+cu128,3.12.13,True,12.8,Tesla T4,1,Linux,6.6.113+,56388a9f7ab4,False,unknown,not_set
