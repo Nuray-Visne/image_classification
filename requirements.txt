@@ -9,5 +9,6 @@ scikit-learn
 jupyter
 pillow
 requests
+torchvision>=0.13
 fiftyone 
 tqdm
