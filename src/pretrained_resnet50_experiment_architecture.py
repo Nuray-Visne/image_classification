@@ -38,7 +38,15 @@ def freeze_modules(modules):
 
 
 def build_modified_pretrained_resnet50(num_classes: int):
-    backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+    try:
+        weights = models.ResNet50_Weights.IMAGENET1K_V2
+    except Exception:
+        weights = "IMAGENET1K_V1"
+
+    try:
+        backbone = models.resnet50(weights=weights)
+    except TypeError:
+        backbone = models.resnet50(pretrained=True)
 
     stem = nn.Sequential(
         backbone.conv1,
