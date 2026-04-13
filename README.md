@@ -1,53 +1,122 @@
-This repository is for an image classification task (chicken, egg, balloon) using the Open Images dataset.
+# Project C – Image Classification (Chicken, Egg, Balloon)
 
-## Python virtual environment
+Lecturer-facing summary for Project C (`[resources/Project C.docx.pdf](resources/Project%20C.docx.pdf)`): ResNet50-based classification of Open Images–style samples into three classes, with scratch training, ImageNet transfer learning, augmentation, an architecture variant, and Grad-CAM on custom images. Reported numbers come only from `results/*.csv` (and figures where noted).
 
-Create a `.venv` in the project root (from PowerShell):
+## Objective
 
-```powershell
-cd c:\mai\2.Semester\CVAI\image_classification
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+Implement the Project C task list: explore the three-class setup, use an 80/20 train/test split, train ResNet50 from scratch and with ImageNet pretraining (including an early-epoch comparison), run augmentation and an architecture experiment, visualize confusions and Grad-CAM on web images, and answer the assignment’s quantitative and comparison questions using saved metrics.
 
-In **Command Prompt** activation is:
+## Dataset & split
 
-```cmd
-.\.venv\Scripts\activate.bat
-```
+- **Source:** [Open Images](https://storage.googleapis.com/openimages/web/visualizer/index.html?type=detection) (subset built via FiftyOne in `src/download_images.py`).
+- **Classes used in training/evaluation:** `Balloon`, `Chicken`, `Egg (Food)` (see `classes` in `results/resnet50_scratch_summary.csv`).
+- **Split:** 80% train / 20% test, fixed seed 42 (`seed` in summaries).
+- **Sizes in reported runs:** 1200 train / 300 test (`train_samples`, `test_samples` in `results/*_summary.csv`). Confusion matrices use 100 test images per class (see `results/*_confusion_matrix.png`).
+- **On disk (after download):** local default is `data/openimages_subset/classification` with the stratified copy under `data/openimages_subset_split/` (`train/` / `test/`); Colab uses `/content/data/...`; Kaggle uses `/kaggle/working/data/...` (see `resolve_paths()` in `src/utils.py`).
 
-Install dependencies:
+## Compute environments
 
-```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
+- **Scratch ResNet50** and the **modified architecture** experiment were trained on **Kaggle** using the **default free GPU** available to a basic account (session-accelerator GPU; exact chip can vary by notebook session).
+- **Transfer learning** and **transfer + augmentation** were trained on **Google Colab** with CUDA; details are in `results/resnet50_transfer_summary.csv`, `results/resnet50_transfer_aug_summary.csv`, and `results/run_metadata.csv` (`gpu_name` = Tesla T4 in those saved runs).
 
-The notebook also uses **FiftyOne** for the Open Images zoo workflow. After the venv is active, install it in the same environment (large download):
+## Experiments
 
-```powershell
-pip install fiftyone
-```
 
-Use this venv as the **Jupyter kernel** in Cursor/VS Code so `import` and `%pip` target `.venv` (check with `import sys; print(sys.executable)` in a cell—it should end with `.venv\Scripts\python.exe`).
+| Topic                                    | What was run                                                             | Code / notebooks                                                                        | Main `results/` artifacts                                                                                                                                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **EDA**                                  | Class/distribution exploration for the three categories                  | `image_classification.ipynb` (repo root)                                                | Supports methodology; plots/notes in notebook                                                                                                                                                                                                  |
+| **Scratch ResNet50**                     | Random init, 20 epochs                                                   | `src/train_resnet50_scratch.py`                                                         | `resnet50_scratch_summary.csv`, `resnet50_scratch_history.csv`, `resnet50_scratch_curves.png`, `resnet50_scratch_confusion_matrix.png`, `resnet50_scratch.pth`                                                                                 |
+| **Transfer (ImageNet)**                  | Pretrained ResNet50, 20 epochs                                           | `src/train_resnet50_transfer_learning.py`, `src/train_resnet50_transfer_learning.ipynb` | `resnet50_transfer_summary.csv`, `resnet50_transfer_history.csv`, `resnet50_transfer_curves.png`, `resnet50_transfer_confusion_matrix.png`, `resnet50_transfer.pth`                                                                            |
+| **Transfer + augmentation**              | Horizontal flip, rotation, translation + training                        | `src/train_resnet50_transfer_learning_data_augmentation.ipynb`                          | `resnet50_transfer_aug_summary.csv`, `resnet50_transfer_aug_history.csv`, `resnet50_transfer_aug_curves.png`, `resnet50_transfer_aug_confusion_matrix.png`                                                                                     |
+| **Architecture experiment**              | Extra conv blocks after `conv3_block4_out`, early layers frozen per spec | `src/pretrained_resnet50_experiment_architecture.py`                                    | `resnet50_experiment_architecture_summary.csv`, `resnet50_experiment_architecture_history.csv`, `resnet50_experiment_architecture_curves.png`, `resnet50_experiment_architecture_confusion_matrix.png`, `resnet50_experiment_architecture.pth` |
+| **Scratch vs transfer (early training)** | Overlay train/test loss and accuracy                                     | `src/plot_scratch_vs_transfer.py`                                                       | `scratch_vs_transfer_first10.png`, `scratch_vs_transfer_first20.png`                                                                                                                                                                           |
+| **Transfer vs transfer+aug**             | Compare val curves                                                       | (notebook / plotting workflow)                                                          | `transfer_vs_transfer_aug.png`                                                                                                                                                                                                                 |
+| **Grad-CAM**                             | Web images + saliency                                                    | `src/gradcam_test_images.py`                                                            | `results/gradcam/*.png` (nine files; see checklist)                                                                                                                                                                                            |
 
-## Dataset: how it is loaded and where it is saved
 
-### Annotation CSV (`image_classification.ipynb`)
+Run timestamps for Colab transfer jobs: `results/run_metadata.csv`. (Scratch and architecture: Kaggle—see **Compute environments**.)
 
-If `data/chicken_egg_balloon_annotations.csv` does not exist, the notebook downloads and builds it:
+## Project C checklist
 
-1. **Train bounding boxes:** `https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv` → saved under `data/oidv6-train-annotations-bbox.csv` (large file).
-2. **Class names (boxable):** `https://storage.googleapis.com/openimages/v7/oidv7-class-descriptions-boxable.csv` → `data/oidv7-class-descriptions-boxable.csv`.
-3. Rows are merged on `LabelName`, filtered to classes **Chicken**, **Egg**, and **Balloon**, and written to **`data/chicken_egg_balloon_annotations.csv`**.
+Derived from `[resources/Project C.docx.pdf](resources/Project%20C.docx.pdf)`.
 
-If an older copy exists in the **project root**, prefer loading **`data/chicken_egg_balloon_annotations.csv`** in EDA cells so paths stay consistent.
 
-### Image subset (FiftyOne zoo cell)
+| Requirement                                                                                                                                                                              | Status | Evidence                                                                                                                                                                                                                                                                                                                                                                             | Notes                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explore dataset: classes, distribution, imbalances, observations affecting training                                                                                                      | DONE   | `image_classification.ipynb`; class list and 1200/300 counts in `results/resnet50_scratch_summary.csv`                                                                                                                                                                                                                                                                               | Notebook discusses Open Images frequency; **training split is class-balanced** (100 test images per class in confusion figures).                                                                                                                                          |
+| Preparation: 80/20 train/test split                                                                                                                                                      | DONE   | `train_samples`/`test_samples` in `results/resnet50_scratch_summary.csv`                                                                                                                                                                                                                                                                                                             | 1200 / 300 consistent across experiments.                                                                                                                                                                                                                                 |
+| Train ResNet50 from scratch; estimate test accuracy                                                                                                                                      | DONE   | `results/resnet50_scratch_summary.csv`, `results/resnet50_scratch_history.csv`                                                                                                                                                                                                                                                                                                       | `final_test_accuracy` = `0.71`.                                                                                                                                                                                                                                           |
+| Transfer learning: ImageNet ResNet50; test accuracy; **loss & accuracy over first 10 epochs vs scratch**                                                                                 | DONE   | `results/resnet50_transfer_summary.csv`, `results/resnet50_transfer_history.csv`, `results/resnet50_scratch_history.csv`, `results/scratch_vs_transfer_first10.png`                                                                                                                                                                                                                  | Epoch-level metrics in history CSVs; see **Epochs & first-10-epoch comparison**.                                                                                                                                                                                          |
+| Data augmentation: random flip, rotate, translation; train again; discuss                                                                                                                | DONE   | `src/train_resnet50_transfer_learning_data_augmentation.ipynb`, `results/resnet50_transfer_aug_summary.csv`, `results/resnet50_transfer_aug_history.csv`, `results/transfer_vs_transfer_aug.png`                                                                                                                                                                                     | Augmentation transforms defined in notebook.                                                                                                                                                                                                                              |
+| Architecture: insert 3×3 (512, same, stride 1, LeakyReLU), 1×1 (1024, same, stride 1, LeakyReLU), 3×3 (1024, same, stride 2, LeakyReLU) after `conv3_block4_out`; freeze conv2 and below | DONE   | `src/pretrained_resnet50_experiment_architecture.py`, `results/resnet50_experiment_architecture_summary.csv`                                                                                                                                                                                                                                                                         | Trained/evaluated; fewer parameters than full ResNet50 (see summary CSV).                                                                                                                                                                                                 |
+| Own internet images + activation maps (how the net decided)                                                                                                                              | DONE   | `results/gradcam/baloon_gradcam.png`, `results/gradcam/balloon_egg_gradcam.png`, `results/gradcam/balloon_girl_gradcam.png`, `results/gradcam/chicken_gradcam.png`, `results/gradcam/chicken-farm_gradcam.png`, `results/gradcam/chicken_egg_man_gradcam.png`, `results/gradcam/egg_chicken_gradcam.png`, `results/gradcam/egg_flur_gradcam.png`, `results/gradcam/eggs_gradcam.png` | Nine Grad-CAM PNGs under `results/gradcam/`.                                                                                                                                                                                                                              |
+| Report train vs test accuracy                                                                                                                                                            | DONE   | `results/*_summary.csv`, `results/resnet50_experiment_architecture_history.csv` (final train acc)                                                                                                                                                                                                                                                                                    | Modified model: final train accuracy from **epoch 20** in history (summary has no `final_train_accuracy` column).                                                                                                                                                         |
+| Report infrastructure and inference time                                                                                                                                                 | DONE   | This **Compute environments** section; `results/resnet50_transfer_summary.csv`, `results/resnet50_transfer_aug_summary.csv`, `results/run_metadata.csv`; `average_inference_time_ms` in all four `*_summary.csv`                                                                                                                                                                     | **Colab:** device/GPU/CUDA/Python/Torch in transfer CSVs. **Scratch + architecture:** **Kaggle** (free/basic GPU)—documented here; those two summary CSVs do not repeat the same metadata columns as the Colab exports. **Inference times** are in every `*_summary.csv`. |
+| Report number of parameters                                                                                                                                                              | DONE   | `num_parameters` (and `trainable_parameters` where present) in `results/*_summary.csv`                                                                                                                                                                                                                                                                                               | Transfer rows omit `trainable_parameters` in CSV schema; scratch/modified include trainable counts.                                                                                                                                                                       |
+| Confusion matrix; which categories are most confused                                                                                                                                     | DONE   | `results/resnet50_scratch_confusion_matrix.png`, `results/resnet50_transfer_confusion_matrix.png`, `results/resnet50_transfer_aug_confusion_matrix.png`, `results/resnet50_experiment_architecture_confusion_matrix.png`                                                                                                                                                             | Patterns called out in **Answers to assignment questions** (read counts from the figures).                                                                                                                                                                                |
+| Compare results of experiments                                                                                                                                                           | DONE   | All `results/*_summary.csv`, `results/scratch_vs_transfer_first10.png`, `results/scratch_vs_transfer_first20.png`, `results/transfer_vs_transfer_aug.png`                                                                                                                                                                                                                            | Numeric comparison in **Results summary** and Q&A.                                                                                                                                                                                                                        |
 
-The notebook can load **`open-images-v7`** via `fiftyone.zoo.load_zoo_dataset` (e.g. detections, selected classes, split such as `train`), then **copy** images into the folder given by **`OUTPUT_DIR`** in that cell.
 
-- Set **`OUTPUT_DIR`** to a real path on your machine (the notebook may still use a placeholder).
-- Exported images are placed in **per-class subfolders** (names follow Open Images / FiftyOne labels, e.g. `Egg_(Food)`).
+## Results summary
 
-FiftyOne also caches zoo data in its own directory (see [FiftyOne dataset zoo](https://docs.voxel51.com/user_guide/dataset_zoo/index.html)); **`OUTPUT_DIR`** is your explicit export for file-based training or inspection.
+All metrics below are copied from `results/*_summary.csv` except **final train accuracy** for the modified architecture, which is taken from **epoch 20** of `results/resnet50_experiment_architecture_history.csv` (`train_acc` column), because `results/resnet50_experiment_architecture_summary.csv` has no train-accuracy field.
+
+
+| Experiment                       | Final test acc | Final train acc     | Test loss           | Parameters | Trainable params | Training time (s) | Avg epoch (s)      | Inference (ms)     |
+| -------------------------------- | -------------- | ------------------- | ------------------- | ---------- | ---------------- | ----------------- | ------------------ | ------------------ |
+| Scratch                          | 0.71           | 0.8891666666666667  | 1.001659870147705   | 23514179   | 23514179         | 299.0102331638336 | 14.95043991804123  | 5.704379081726074  |
+| Transfer (ImageNet)              | 0.95           | 0.9891666666666666  | 0.171155506602178   | 23514179   | —                | 311.6081519126892 | 15.580184376239776 | 2.8258529714272687 |
+| Transfer + augmentation          | 0.96           | 0.9958333333333332  | 0.143319736419556   | 23514179   | —                | 298.2231321334839 | 14.910941159725189 | 2.8272627285722205 |
+| Modified pretrained architecture | 0.93           | 0.9966666666666667† | 0.19646926313638688 | 13776451   | 13551107         | 278.9933626651764 | 13.949581360816955 | 5.1377177238464355 |
+
+
+† From `results/resnet50_experiment_architecture_history.csv` row `epoch` = 20.
+
+## Answers to assignment questions
+
+- **What accuracy was achieved? Train vs test?**  
+From the summary/history CSVs above: scratch **0.8891666666666667** train / **0.71** test; transfer **0.9891666666666666** / **0.95**; transfer+aug **0.9958333333333332** / **0.96**; modified **0.9966666666666667** (epoch 20 history) / **0.93** test. **Highest test accuracy in the saved runs is 0.96** (`results/resnet50_transfer_aug_summary.csv`, `final_test_accuracy`).
+- **Infrastructure? Inference time?**  
+**Scratch** and the **modified architecture** run were executed on **Kaggle** with the **default free GPU** for a basic user (see **Compute environments**). **Transfer** and **transfer + augmentation** ran on **Google Colab** with CUDA; `results/resnet50_transfer_summary.csv` and `results/resnet50_transfer_aug_summary.csv` record `runtime_env` = `colab`, `device` = `cuda`, `gpu_name` = `Tesla T4`, `cuda_version` = `12.8`, plus Python/Torch versions, and `results/run_metadata.csv` adds timestamps. **Average inference time (300 images, batch 32)** is in each summary CSV: scratch **5.704379081726074 ms** (`results/resnet50_scratch_summary.csv`); transfer **2.8258529714272687 ms**; transfer+aug **2.8272627285722205 ms**; modified **5.1377177238464355 ms** (`results/resnet50_experiment_architecture_summary.csv`).
+- **Number of parameters?**  
+**23514179** for standard ResNet50 heads (scratch/transfer/aug) per summaries; **13776451** total and **13551107** trainable for the modified model (`results/resnet50_experiment_architecture_summary.csv`).
+- **Which categories are most confused? (confusion matrix)**  
+Read off-diagonal counts from: `results/resnet50_scratch_confusion_matrix.png`, `results/resnet50_transfer_confusion_matrix.png`, `results/resnet50_transfer_aug_confusion_matrix.png`, `results/resnet50_experiment_architecture_confusion_matrix.png`. **Scratch:** largest errors involve **Egg (Food)** predicted as **Chicken** and **Balloon** as **Egg (Food)** (see figure). **Transfer + aug:** **Balloon** vs **Egg (Food)** swaps dominate remaining errors (see figure). **Modified architecture:** **Balloon** vs **Egg (Food)** and some **Balloon** predictions for true chickens/eggs (see figure).
+- **Compare experiments**  
+Using final test accuracy and test loss from the summaries: transfer (**0.95**, loss **0.171155506602178**) vs scratch (**0.71**, loss **1.001659870147705**) shows a large gain from pretraining. Transfer+aug reaches **0.96** with **lower** test loss **0.143319736419556** than plain transfer in these CSVs. The modified architecture is smaller/faster per epoch (see **Results summary**) but **0.93** test accuracy vs **0.95**–**0.96** for the full ResNet50 transfer settings. **First 10 epochs:** pretrained network reaches higher test accuracy and lower train loss much earlier than scratch—see epoch 10 rows in `results/resnet50_scratch_history.csv` vs `results/resnet50_transfer_history.csv` and `results/scratch_vs_transfer_first10.png`.
+
+**Epoch 10 (CSV rows `epoch` = 10):**
+
+
+| Model    | `train_loss`        | `train_acc`        | `test_loss`         | `test_acc`         |
+| -------- | ------------------- | ------------------ | ------------------- | ------------------ |
+| Scratch  | 0.4693199356396993  | 0.8141666666666667 | 0.6024840807914734  | 0.7866666666666666 |
+| Transfer | 0.02481985181880494 | 0.9933333333333333 | 0.18090284273028373 | 0.9433333333333334 |
+
+
+(Source: `results/resnet50_scratch_history.csv`, `results/resnet50_transfer_history.csv`.)
+
+## Epochs & first-10-epoch comparison
+
+- **Training length:** All experiment summaries list `num_epochs` = **20** (`results/resnet50_scratch_summary.csv`, `results/resnet50_transfer_summary.csv`, `results/resnet50_transfer_aug_summary.csv`, `results/resnet50_experiment_architecture_summary.csv`). Learning curves use those 20-epoch histories (`*_history.csv`, `*_curves.png`).
+- **Assignment wording:** Project C asks for the difference in **loss and accuracy** between the randomly initialized and pretrained ResNet50 **over the first 10 epochs**.
+- **How this is satisfied:** Each of `results/resnet50_scratch_history.csv` and `results/resnet50_transfer_history.csv` contains **epochs 1 through 20**, so **epochs 1–10 are included** and can be compared directly (filter `epoch <= 10` or inspect the first ten rows). The figure `results/scratch_vs_transfer_first10.png` focuses on that early segment; `results/scratch_vs_transfer_first20.png` shows the full 20-epoch context. **No separate 10-epoch-only training run is required** to satisfy the first-10-epochs comparison, because the longer runs subsume those metrics.
+
+## Reproducibility
+
+1. **Environment:** `python -m venv .venv` → activate → `pip install -r requirements.txt` (Windows: `.\\.venv\\Scripts\\Activate.ps1`).
+2. **Data:** Run `src/download_images.py` (FiftyOne / Open Images) or place data under `data/openimages_subset/classification` so `src/utils.py` can build the 80/20 split.
+3. **Training scripts / notebooks:**
+  - Scratch: `python src/train_resnet50_scratch.py` (reported run: **Kaggle** GPU; data under `/kaggle/working/data/...` when `detect_env()` sees `/kaggle`)  
+  - Transfer: `src/train_resnet50_transfer_learning.py` or `src/train_resnet50_transfer_learning.ipynb`  
+  - Augmentation: `src/train_resnet50_transfer_learning_data_augmentation.ipynb` (Colab-oriented paths; `resolve_paths()` maps to `/content/data` on Colab)  
+  - Architecture: `python src/pretrained_resnet50_experiment_architecture.py` (reported run: **Kaggle** GPU)  
+  - Grad-CAM: `python src/gradcam_test_images.py`  
+  - Early comparison plots: `python src/plot_scratch_vs_transfer.py`
+4. **Outputs:** Metrics and figures are written under `results/` (CSVs, PNGs, optional `.pth` checkpoints).
+
+## Limitations / optional follow-ups
+
+- **Environment logging (optional):** Mirror Colab-style columns (`gpu_name`, `cuda_version`, etc.) in the scratch and architecture summary exports so Kaggle session details are captured in CSV, not only in this README.
+- **Trainable parameters in transfer CSVs:** The transfer summaries do not list `trainable_parameters`; only total `num_parameters` is recorded.
+
